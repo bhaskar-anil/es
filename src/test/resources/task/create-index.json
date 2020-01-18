@@ -1,0 +1,38 @@
+{
+	"settings" : {
+        "number_of_shards" : 3,
+        "number_of_replicas" : 2
+    },
+    "aliases" : {
+        "alias_1" : {
+            "filter" : {
+                "term" : {"task" : "kaam" }
+            }
+        }
+    },
+    "mappings": {
+	    "properties": {
+			"id": {
+				"type": "text"
+			},
+			"title": {
+				"type": "text"
+			},
+			"details": {
+				"type": "text"
+			},
+			"due" : {
+				"type": "date"
+			},
+			"taskType" : {
+				"type" : "keyword"
+			},
+			"budgetType" : {
+				"type" : "keyword"
+			},
+			"location" : {
+				"type" : "geo_point"
+			}
+	    }
+  }
+}
