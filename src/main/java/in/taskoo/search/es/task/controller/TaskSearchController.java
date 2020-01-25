@@ -2,20 +2,15 @@ package in.taskoo.search.es.task.controller;
 
 import java.util.List;
 
-import org.elasticsearch.index.query.QueryBuilders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.query.FetchSourceFilter;
 import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
-import org.springframework.data.elasticsearch.core.query.SearchQuery;
-import org.springframework.data.elasticsearch.core.query.SourceFilter;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,8 +19,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import in.taskoo.search.es.task.document.Task;
-import in.taskoo.search.es.task.repository.TaskRepository;
-import in.taskoo.search.es.task.repository.TaskSearchRepository;
+import in.taskoo.search.es.task.service.TaskSearchService;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -33,27 +27,29 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/es/tasks")
 public class TaskSearchController {
 
+  @Value("${document.templates.filetypes:}")
+  private String[] feilds;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(TaskSearchController.class);
   
   private final ElasticsearchOperations elasticsearchOperations;
 
-  private final TaskRepository taskRepository;
+  private final TaskSearchService taskSearchService;
   
-  private final TaskSearchRepository taskSearchRepository;
-
-  @GetMapping("/")
-  public @ResponseBody List<Task> test() {
-    return (List<Task>) taskSearchRepository.findAll();
-  }
-
-  // @PutMapping(value = "/{taskId}")
-  public void putTask(@PathVariable String taskId, @RequestBody Task task) {
-    taskRepository.save(task);
-    LOGGER.debug("task is saved with id: " + task.getId());
-  }
-  
+  /**
+   * this method saves a task object into elastic search data use this method to
+   * save a new task or update an existing task
+   * 
+   * it requires a task to have id before saving it
+   * 
+   * @param task
+   */
   @PostMapping("/")
   public void saveTask(@RequestBody Task task) {
+    if (StringUtils.isEmpty(task.getId())) {
+      // through some exception here, no point saving it here
+      LOGGER.error("task id is mandatory to save a task into elastic search data" + task.getTitle());
+    }
     IndexQuery indexQuery = new IndexQueryBuilder()
         .withId(task.getId().toString())
         .withObject(task)
@@ -62,17 +58,20 @@ public class TaskSearchController {
       LOGGER.debug("task is saved with id: " + documentId);
   }
 
+  /**
+   * 
+   * this method searches for tasks
+   * 
+   * @param query
+   * @param pageable
+   * @param select
+   * @return
+   * @throws Exception
+   */
   @GetMapping("/search")
-  public @ResponseBody List<Task> search(@RequestParam(required = false, defaultValue = "0") Integer pageNumber,
-      @RequestParam(required = false, defaultValue = "20") Integer pageSize, @RequestParam String query,
-      @RequestParam(required = false) String... select) {
-
-    Pageable pageable = PageRequest.of(pageNumber, pageSize);
-    SourceFilter sourceFilter = new FetchSourceFilter(select, null);
-
-    SearchQuery searchQuery = new NativeSearchQueryBuilder().withSourceFilter(sourceFilter).withPageable(pageable)
-        .withQuery(QueryBuilders.multiMatchQuery(query, "title", "details")).build();
-    return taskSearchRepository.search(searchQuery).getContent();
+  public @ResponseBody List<Long> search(@RequestParam String query, @RequestParam(required = false) Pageable pageable,
+      @RequestParam(required = false) String filters) throws Exception {
+    return taskSearchService.searchForIds(query, pageable, filters);
   }
 
 }

@@ -10,20 +10,19 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum TaskType {
-
-  IN_PERSON(0), REMOTE(1);
+public enum EstimateType {
+  HOURLY(0), TOTAL(1);
 
   @JsonCreator
-  public static TaskType toEnum(Integer value) {
-    return Arrays.stream(TaskType.values()).filter(type -> type.getId().equals(value)).findFirst().orElseThrow(null);
+  public static EstimateType toEnum(Integer value) {
+    return Arrays.stream(EstimateType.values()).filter(type -> type.getId().equals(value)).findFirst()
+        .orElseThrow(null);
   }
 
   private final Integer id;
-  
+
   @JsonValue
   public String getTaskType() {
     return this.toString();
   }
-
 }

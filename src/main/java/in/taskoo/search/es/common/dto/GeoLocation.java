@@ -6,4 +6,5 @@ import lombok.Data;
 public class GeoLocation {
   private Double longitude;
   private Double latitude;
+  private String formattedAddress;
 }
